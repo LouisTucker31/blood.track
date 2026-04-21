@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blood Marker Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <div class="logo">blood<span>.</span>track</div>
+  <nav class="nav-tabs">
+    <button class="nav-tab active" onclick="setView('add')">Add Entry</button>
+    <button class="nav-tab" onclick="setView('history')">History</button>
+    <button class="nav-tab" onclick="setView('charts')">Charts</button>
+  </nav>
+</header>
+
+<main class="main">
+
+  <!-- ADD VIEW -->
+  <div class="view active" id="view-add">
+    <div class="add-grid">
+      <div class="card">
+        <div class="card-title">Log a result</div>
+        <div class="cat-pills" id="cat-pills"></div>
+        <div class="field">
+          <label>Marker</label>
+          <select id="marker-select" onchange="onMarkerChange()"></select>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Value</label>
+            <input type="number" id="entry-value" step="any" placeholder="e.g. 5.2" />
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="entry-date" />
+          </div>
+        </div>
+        <div id="unit-display" class="unit-hint"></div>
+        <div id="range-display" class="range-hint"></div>
+        <div class="field" style="margin-top:1rem;">
+          <label>Notes (optional)</label>
+          <input type="text" id="entry-notes" placeholder="e.g. fasted, morning sample…" />
+        </div>
+        <button class="btn-primary" onclick="addEntry()">Save result</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Reference ranges</div>
+        <div id="ref-info" style="color:var(--text-muted);font-size:13px;">Select a marker to see its reference range.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY VIEW -->
+  <div class="view" id="view-history">
+    <div class="section-header">
+      <div class="section-title">All Results</div>
+      <button class="btn-icon" style="width:auto;padding:0 12px;font-size:12px;font-weight:600;color:var(--text-muted);" onclick="exportData()">Export Excel</button>
+    </div>
+    <div class="filter-bar">
+      <input type="text" id="search-input" placeholder="Search marker…" oninput="renderHistory()" />
+      <select id="cat-filter" onchange="renderHistory()">
+        <option value="">All categories</option>
+      </select>
+      <select id="sort-select" onchange="renderHistory()">
+        <option value="date-desc">Newest first</option>
+        <option value="date-asc">Oldest first</option>
+        <option value="marker">Marker A–Z</option>
+      </select>
+    </div>
+    <div class="results-list" id="results-list"></div>
+  </div>
+
+  <!-- CHARTS VIEW -->
+  <div class="view" id="view-charts">
+    <div class="charts-header">
+      <div class="section-title" style="font-family:'DM Serif Display',serif;font-size:20px;margin-bottom:.5rem;">Trends</div>
+      <div style="font-size:13px;color:var(--text-muted);">Select a marker below to view its history as a chart.</div>
+    </div>
+    <div class="marker-select-grid" id="marker-chips"></div>
+    <div id="charts-area"></div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
