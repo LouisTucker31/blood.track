@@ -25,6 +25,50 @@
     <!-- ADD VIEW -->
     <div class="view" id="view-add">
       <div class="view-inner">
+
+        <!-- PANEL MODE FORM -->
+        <div id="panel-form" style="display:none;">
+          <div class="panel-header">
+            <div class="panel-header-left">
+              <div class="panel-test-name" id="panel-test-name"></div>
+              <button class="panel-back-btn" onclick="exitPanelMode()">← Single marker</button>
+            </div>
+            <div class="field panel-date-field">
+              <label>Date</label>
+              <input type="date" id="panel-date" />
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:1rem;">
+            <div class="field" style="margin-bottom:0;">
+              <label>Notes (shared across all markers)</label>
+              <input type="text" id="panel-notes" placeholder="e.g. fasted, morning sample…" />
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:1rem;">
+            <div class="card-title">Markers</div>
+            <div id="panel-rows"></div>
+
+            <!-- extra marker picker -->
+            <div id="panel-extra-picker" style="display:none;gap:8px;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+              <select id="panel-extra-marker-sel" onchange="onPanelExtraMarkerChange()" class="panel-extra-sel">
+                <option value="">— Select marker —</option>
+              </select>
+              <select id="panel-extra-unit-sel" class="panel-extra-sel" style="max-width:110px;">
+                <option value="">—</option>
+              </select>
+              <button class="btn-primary" style="width:auto;padding:0 14px;height:38px;flex-shrink:0;" onclick="confirmPanelExtraRow()">Add</button>
+            </div>
+
+            <button class="panel-add-extra-btn" onclick="addPanelExtraRow()">+ Add extra marker</button>
+          </div>
+
+          <button class="btn-primary" onclick="savePanelTest()">Save Test</button>
+        </div>
+
+        <!-- SINGLE MARKER FORM (existing) -->
+        <div id="single-marker-form">
         <div class="add-grid">
           <div class="card">
             <div class="card-title">Log a result</div>
@@ -57,6 +101,7 @@
             <div id="ref-info" style="color:var(--text-muted);font-size:13px;">Select a marker to see its reference range.</div>
           </div>
         </div>
+        </div><!-- /single-marker-form -->
       </div>
     </div>
 
@@ -99,7 +144,48 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<!-- Template Modal -->
+<div class="template-modal-backdrop" id="template-modal" onclick="handleBackdropClick(event)">
+  <div class="template-modal-box">
+    <div class="template-modal-header">
+      <div class="template-modal-title">New Test Template</div>
+      <button class="btn-icon" onclick="closeTemplateModal()">✕</button>
+    </div>
 
+    <div class="field" style="margin-bottom:1.25rem;">
+      <label>Test Name</label>
+      <input type="text" id="tmpl-name" placeholder="e.g. Hormone Panel, Annual Check…" />
+    </div>
+
+    <div class="tmpl-section-label">Markers in this test</div>
+    <div id="tmpl-marker-list" class="tmpl-marker-list"></div>
+
+    <div class="tmpl-add-row">
+      <select id="tmpl-mk-name" onchange="onTmplMarkerPickChange()">
+        <option value="">— Select a marker —</option>
+      </select>
+      <select id="tmpl-mk-unit">
+        <option value="">— Unit —</option>
+      </select>
+      <button class="btn-primary tmpl-add-btn" onclick="addDraftMarker()">Add</button>
+    </div>
+
+    <div class="tmpl-footer">
+      <div id="tmpl-delete-wrap" style="display:none;">
+        <button class="btn-primary tmpl-delete-full-btn" id="tmpl-delete-btn" onclick="deleteTemplate(editingTemplateId)">Delete template</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-left:auto;">
+        <button class="tmpl-cancel-btn" onclick="closeTemplateModal()">Cancel</button>
+        <button class="btn-primary" style="width:auto;padding:0 20px;" onclick="saveTemplate()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script src="app.js"></script>
+<script>
+  function handleBackdropClick(e) {
+    if (e.target.id === 'template-modal') closeTemplateModal();
+  }
+</script>
 </body>
 </html>
