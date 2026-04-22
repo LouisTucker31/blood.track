@@ -65,8 +65,10 @@ body {
   align-items: center;
   gap: 1rem;
   height: calc(60px + env(safe-area-inset-top));
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 100;
 }
 .logo {
@@ -106,6 +108,7 @@ body {
 .views-wrapper {
   width: 100%;
   overflow: hidden;
+  margin-top: calc(60px + env(safe-area-inset-top));
 }
 .views-container {
   display: flex;
