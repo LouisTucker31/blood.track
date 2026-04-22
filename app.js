@@ -204,11 +204,16 @@ function formatDate(d) {
 function renderChipMarkers() {
   const tracked = [...new Set(entries.map(e => e.marker))];
   const el = document.getElementById('marker-chips');
+  const mobileEl = document.getElementById('mobile-marker-select');
+
   if (!tracked.length) {
     el.innerHTML = `<div style="color:var(--text-muted);font-size:14px;grid-column:1/-1;padding:2rem 0;">No data yet. Add entries to see trends.</div>`;
+    if (mobileEl) mobileEl.innerHTML = '<option value="">No data yet</option>';
     document.getElementById('charts-area').innerHTML = '';
     return;
   }
+
+  // Desktop chips
   el.innerHTML = tracked.map(name => {
     const count = entries.filter(e => e.marker === name).length;
     const sel = activeChipMarker === name;
@@ -217,6 +222,15 @@ function renderChipMarkers() {
       <div class="mc-count">${count} result${count !== 1 ? 's' : ''}</div>
     </div>`;
   }).join('');
+
+  // Mobile dropdown
+  if (mobileEl) {
+    mobileEl.innerHTML = tracked.map(name =>
+      `<option value="${name}"${activeChipMarker === name ? ' selected' : ''}>${name}</option>`
+    ).join('');
+    mobileEl.onchange = () => selectChipMarker(mobileEl.value);
+  }
+
   if (!activeChipMarker || !tracked.includes(activeChipMarker)) {
     activeChipMarker = tracked[0];
     renderChipMarkers();
@@ -230,7 +244,84 @@ function selectChipMarker(name) {
   activeChipMarker = name;
   renderChipMarkers();
 }
+function generateTrendInsight(markerName, vals, marker) {
+  if (vals.length < 2) return `Only one reading recorded — add more results over time to see a trend.`;
 
+  const last = vals[vals.length - 1];
+  const prev = vals[vals.length - 2];
+  const oldest = vals[0];
+  const n = vals.length;
+
+  // Linear regression slope across all points
+  const xMean = (n - 1) / 2;
+  const yMean = vals.reduce((a, b) => a + b, 0) / n;
+  const num = vals.reduce((sum, v, i) => sum + (i - xMean) * (v - yMean), 0);
+  const den = vals.reduce((sum, _, i) => sum + (i - xMean) ** 2, 0);
+  const slope = den === 0 ? 0 : num / den;
+
+  const range = marker && marker.high && marker.low ? marker.high - marker.low : null;
+  const slopePerStep = Math.abs(slope);
+  const isRapid = range ? slopePerStep > range * 0.1 : slopePerStep > yMean * 0.1;
+  const isSteady = range ? slopePerStep < range * 0.02 : slopePerStep < yMean * 0.02;
+
+  const latestStatus = marker ? statusOf(marker, last) : 'na';
+  const prevStatus = marker ? statusOf(marker, prev) : 'na';
+  const unit = marker ? marker.unit : '';
+
+  // Direction word
+  let direction, directionAdverb;
+  if (slope > 0) {
+    direction = 'rising';
+    directionAdverb = isRapid ? 'rising sharply' : isSteady ? 'creeping upward' : 'trending upward';
+  } else if (slope < 0) {
+    direction = 'falling';
+    directionAdverb = isRapid ? 'dropping sharply' : isSteady ? 'gradually decreasing' : 'trending downward';
+  } else {
+    return `${markerName} has been very stable across all ${n} readings.`;
+  }
+
+  const span = n === 2 ? 'between your two readings' : `across your last ${n} results`;
+
+  // Status-aware commentary
+  if (latestStatus === 'normal' && prevStatus !== 'normal') {
+    return `${markerName} was previously ${prevStatus} but has moved back into the normal range — a positive sign. It is still ${directionAdverb} ${span}, so worth monitoring.`;
+  }
+  if (latestStatus === 'high' && slope > 0) {
+    return `${markerName} is already above the upper limit and continues ${directionAdverb} ${span} (now ${fmt(last)} ${unit}). This warrants attention.`;
+  }
+  if (latestStatus === 'low' && slope < 0) {
+    return `${markerName} is already below the lower limit and is ${directionAdverb} ${span} (now ${fmt(last)} ${unit}). Consider discussing this with your doctor.`;
+  }
+  if (latestStatus === 'high' && slope < 0) {
+    return `${markerName} is elevated but ${directionAdverb} ${span} — moving in the right direction. Latest reading is ${fmt(last)} ${unit}.`;
+  }
+  if (latestStatus === 'low' && slope > 0) {
+    return `${markerName} has been low but is ${directionAdverb} ${span} — moving in the right direction. Latest reading is ${fmt(last)} ${unit}.`;
+  }
+
+  // Normal range, stable
+  if (isSteady) {
+    return `${markerName} is within the normal range and has stayed very consistent ${span} — no meaningful change.`;
+  }
+
+  // Normal range, moving
+  if (marker && marker.high !== null && slope > 0) {
+    const headroom = marker.high - last;
+    const closeToLimit = range ? headroom < range * 0.15 : false;
+    if (closeToLimit) {
+      return `${markerName} is within range but ${directionAdverb} ${span} and is now approaching the upper limit (${fmt(last)} ${unit}, limit is ${fmt(marker.high)} ${unit}).`;
+    }
+  }
+  if (marker && marker.low !== null && marker.low > 0 && slope < 0) {
+    const headroom = last - marker.low;
+    const closeToLimit = range ? headroom < range * 0.15 : false;
+    if (closeToLimit) {
+      return `${markerName} is within range but ${directionAdverb} ${span} and is getting close to the lower limit (${fmt(last)} ${unit}, limit is ${fmt(marker.low)} ${unit}).`;
+    }
+  }
+
+  return `${markerName} is within the normal range and has been ${directionAdverb} ${span}. Latest reading is ${fmt(last)} ${unit}.`;
+}
 function renderChart(markerName) {
   const markerEntries = entries.filter(e => e.marker === markerName)
     .sort((a,b) => a.date.localeCompare(b.date));
@@ -316,6 +407,12 @@ function renderChart(markerName) {
       </div>
     </div>
   `;
+
+  // Trend insight
+  const trendEl = document.createElement('div');
+  trendEl.style.cssText = 'margin-top:1rem;font-size:13px;color:var(--text-muted);line-height:1.6;padding:10px 14px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);';
+  trendEl.textContent = generateTrendInsight(markerName, vals, m);
+  el.querySelector('.chart-card').appendChild(trendEl);
 
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
   chartInstance = new Chart(document.getElementById('main-chart'), {
