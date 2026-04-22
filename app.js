@@ -473,7 +473,38 @@ function setView(v) {
   if (v === 'history') renderHistory();
   if (v === 'charts') renderChipMarkers();
 }
+// Swipe navigation
+(function initSwipe() {
+  const views = ['add', 'history', 'charts'];
+  let startX = 0;
+  let startY = 0;
+  let isDragging = false;
 
+  document.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    isDragging = false;
+  }, { passive: true });
+
+  document.addEventListener('touchmove', e => {
+    const dx = Math.abs(e.touches[0].clientX - startX);
+    const dy = Math.abs(e.touches[0].clientY - startY);
+    if (dx > dy && dx > 10) isDragging = true;
+  }, { passive: true });
+
+  document.addEventListener('touchend', e => {
+    if (!isDragging) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = Math.abs(e.changedTouches[0].clientY - startY);
+    if (Math.abs(dx) < 50 || dy > 80) return;
+
+    const currentView = views.find(v => document.getElementById('view-' + v).classList.contains('active'));
+    const currentIdx = views.indexOf(currentView);
+
+    if (dx < 0 && currentIdx < views.length - 1) setView(views[currentIdx + 1]); // swipe left → next
+    if (dx > 0 && currentIdx > 0) setView(views[currentIdx - 1]);                // swipe right → prev
+  }, { passive: true });
+})();
 // Init
 (function init() {
   document.getElementById('entry-date').valueAsDate = new Date();
