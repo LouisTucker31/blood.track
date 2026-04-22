@@ -473,7 +473,10 @@ function setView(v) {
   currentViewIdx = idx;
   const container = document.getElementById('views-container');
   container.style.transition = 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-  container.style.transform = `translateX(-${idx * 33.333}%)`;
+  const wrapper = container.parentElement;
+  const gapPx = 32;
+  const pct = ((wrapper.offsetWidth + gapPx) / wrapper.offsetWidth) * (idx * 33.333);
+  container.style.transform = `translateX(-${pct}%)`;
   document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-tab')[idx].classList.add('active');
   if (v === 'history') renderHistory();
@@ -490,7 +493,10 @@ function setView(v) {
   let active = false;
 
   function getBaseOffset() {
-    return currentViewIdx * (100 / 3);
+    const wrapper = document.getElementById('views-container').parentElement;
+    const gapPx = 32; // 2rem
+    const totalWidth = wrapper.offsetWidth;
+    return currentViewIdx * ((totalWidth + gapPx) / wrapper.offsetWidth) * (100 / 3);
   }
 
   wrapper.addEventListener('touchstart', e => {
@@ -550,5 +556,6 @@ function setView(v) {
   const container = document.getElementById('views-container');
   container.style.transition = 'none';
   container.style.transform = 'translateX(0%)';
+  currentViewIdx = 0;
   document.querySelectorAll('.nav-tab')[0].classList.add('active');
 })();

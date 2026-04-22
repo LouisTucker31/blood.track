@@ -101,19 +101,21 @@ body {
 .view { display: none; }
 .view.active { display: block; }
 
+.views-wrapper {
+  overflow: hidden;
+  width: 100%;
+}
 .views-container {
   display: flex;
   width: 300%;
   will-change: transform;
+  gap: 2rem;
 }
 .views-container .view {
   display: block;
-  width: 33.333%;
+  width: calc(33.333% - 1.333rem);
   flex-shrink: 0;
-}
-.views-wrapper {
-  overflow: hidden;
-  width: 100%;
+  min-width: 0;
 }
 
 /* Add Entry */
