@@ -362,19 +362,19 @@ body {
 /* Responsive */
 @media (max-width: 640px) {
     .add-grid { grid-template-columns: 1fr; }
-    .field-row { grid-template-columns: 1fr 1fr; max-width: 100%; overflow: hidden; }
-    input[type="date"] { text-align: left; padding-right: 4px; }
+    .field-row { grid-template-columns: 1fr 1fr; width: 100%; box-sizing: border-box; }
+    input[type="date"] { text-align: left; padding-right: 8px; width: 100%; min-width: 0; }
     .result-row {
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: 1fr auto;
       grid-template-rows: auto auto;
       gap: 2px 8px;
       padding: 10px 12px;
     }
-    .result-row > div:nth-child(1) { grid-column: 1 / 3; grid-row: 1; }
-    .result-row > div:nth-child(2) { grid-column: 1; grid-row: 2; align-self: center; }
+    .result-row > div:nth-child(1) { grid-column: 1; grid-row: 1; }
+    .result-row > div:nth-child(2) { grid-column: 1; grid-row: 2; display: flex; align-items: center; gap: 8px; }
     .result-row > div:nth-child(3) { display: none; }
-    .result-row > div:nth-child(4) { grid-column: 2; grid-row: 2; align-self: center; }
-    .result-row > button { grid-column: 3; grid-row: 1 / 3; align-self: center; }
+    .result-row > div:nth-child(4) { display: none; }
+    .result-row > button { grid-column: 2; grid-row: 1 / 3; align-self: center; }
     .chart-stats { grid-template-columns: 1fr 1fr; }
     .main { padding: 1rem; padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); padding-bottom: max(6rem, env(safe-area-inset-bottom)); }
     .app-header { padding: 0 max(1rem, env(safe-area-inset-right)); padding-left: max(1rem, env(safe-area-inset-left)); padding-top: env(safe-area-inset-top); }

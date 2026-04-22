@@ -181,9 +181,9 @@ function renderHistory() {
     const unit = m ? m.unit : '';
     return `<div class="result-row">
       <div><div class="result-marker">${e.marker}</div><div class="result-cat">${e.cat}</div></div>
-      <div class="result-val">${fmt(e.value)} <span style="font-size:11px;color:var(--text-hint);font-weight:400;">${unit}</span></div>
+      <div class="result-val">${fmt(e.value)} <span style="font-size:11px;color:var(--text-hint);font-weight:400;">${unit}</span> <span class="status-badge status-${s}">${statusLabel(s)}</span></div>
       <div class="result-date">${formatDate(e.date)}</div>
-      <div><span class="status-badge status-${s}">${statusLabel(s)}</span></div>
+      <div></div>
       <button class="btn-icon" onclick="deleteEntry(${e.id})" title="Delete">✕</button>
     </div>`;
   }).join('');
