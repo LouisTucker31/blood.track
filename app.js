@@ -50,12 +50,13 @@ const MARKERS = [
 ];
 
 const CATS = [...new Set(MARKERS.map(m => m.cat))];
+const VIEWS = ['add', 'history', 'charts'];
 let entries = JSON.parse(localStorage.getItem('bt_entries') || '[]');
 let selectedCat = CATS[0];
 let activeChipMarker = null;
+let currentViewIdx = 0;
 
 function save() { localStorage.setItem('bt_entries', JSON.stringify(entries)); }
-
 function getMarker(name) { return MARKERS.find(m => m.name === name); }
 
 function statusOf(marker, val) {
@@ -213,7 +214,6 @@ function renderChipMarkers() {
     return;
   }
 
-  // Desktop chips
   el.innerHTML = tracked.map(name => {
     const count = entries.filter(e => e.marker === name).length;
     const sel = activeChipMarker === name;
@@ -223,7 +223,6 @@ function renderChipMarkers() {
     </div>`;
   }).join('');
 
-  // Mobile dropdown
   if (mobileEl) {
     mobileEl.innerHTML = tracked.map(name =>
       `<option value="${name}"${activeChipMarker === name ? ' selected' : ''}>${name}</option>`
@@ -244,15 +243,14 @@ function selectChipMarker(name) {
   activeChipMarker = name;
   renderChipMarkers();
 }
+
 function generateTrendInsight(markerName, vals, marker) {
   if (vals.length < 2) return `Only one reading recorded — add more results over time to see a trend.`;
 
   const last = vals[vals.length - 1];
   const prev = vals[vals.length - 2];
-  const oldest = vals[0];
   const n = vals.length;
 
-  // Linear regression slope across all points
   const xMean = (n - 1) / 2;
   const yMean = vals.reduce((a, b) => a + b, 0) / n;
   const num = vals.reduce((sum, v, i) => sum + (i - xMean) * (v - yMean), 0);
@@ -268,13 +266,10 @@ function generateTrendInsight(markerName, vals, marker) {
   const prevStatus = marker ? statusOf(marker, prev) : 'na';
   const unit = marker ? marker.unit : '';
 
-  // Direction word
-  let direction, directionAdverb;
+  let directionAdverb;
   if (slope > 0) {
-    direction = 'rising';
     directionAdverb = isRapid ? 'rising sharply' : isSteady ? 'creeping upward' : 'trending upward';
   } else if (slope < 0) {
-    direction = 'falling';
     directionAdverb = isRapid ? 'dropping sharply' : isSteady ? 'gradually decreasing' : 'trending downward';
   } else {
     return `${markerName} has been very stable across all ${n} readings.`;
@@ -282,7 +277,6 @@ function generateTrendInsight(markerName, vals, marker) {
 
   const span = n === 2 ? 'between your two readings' : `across your last ${n} results`;
 
-  // Status-aware commentary
   if (latestStatus === 'normal' && prevStatus !== 'normal') {
     return `${markerName} was previously ${prevStatus} but has moved back into the normal range — a positive sign. It is still ${directionAdverb} ${span}, so worth monitoring.`;
   }
@@ -298,13 +292,9 @@ function generateTrendInsight(markerName, vals, marker) {
   if (latestStatus === 'low' && slope > 0) {
     return `${markerName} has been low but is ${directionAdverb} ${span} — moving in the right direction. Latest reading is ${fmt(last)} ${unit}.`;
   }
-
-  // Normal range, stable
   if (isSteady) {
     return `${markerName} is within the normal range and has stayed very consistent ${span} — no meaningful change.`;
   }
-
-  // Normal range, moving
   if (marker && marker.high !== null && slope > 0) {
     const headroom = marker.high - last;
     const closeToLimit = range ? headroom < range * 0.15 : false;
@@ -319,9 +309,9 @@ function generateTrendInsight(markerName, vals, marker) {
       return `${markerName} is within range but ${directionAdverb} ${span} and is getting close to the lower limit (${fmt(last)} ${unit}, limit is ${fmt(marker.low)} ${unit}).`;
     }
   }
-
   return `${markerName} is within the normal range and has been ${directionAdverb} ${span}. Latest reading is ${fmt(last)} ${unit}.`;
 }
+
 function renderChart(markerName) {
   const markerEntries = entries.filter(e => e.marker === markerName)
     .sort((a,b) => a.date.localeCompare(b.date));
@@ -342,7 +332,6 @@ function renderChart(markerName) {
   const textColor = isDark ? '#c0b8a8' : '#7a7060';
   const gridColor = isDark ? 'rgba(255,240,210,0.08)' : 'rgba(60,50,30,0.08)';
   const lineColor = '#c8460a';
-  const dotColor = '#c8460a';
 
   const labels = markerEntries.map(e => formatDate(e.date));
   const data = vals;
@@ -364,7 +353,6 @@ function renderChart(markerName) {
     fill: true,
   }];
 
-  const refLines = [];
   if (m && m.high !== null) {
     datasets.push({
       label: 'Upper limit',
@@ -408,7 +396,6 @@ function renderChart(markerName) {
     </div>
   `;
 
-  // Trend insight
   const trendEl = document.createElement('div');
   trendEl.style.cssText = 'margin-top:1rem;font-size:13px;color:var(--text-muted);line-height:1.6;padding:10px 14px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);';
   trendEl.textContent = generateTrendInsight(markerName, vals, m);
@@ -464,46 +451,44 @@ function exportData() {
   a.click();
 }
 
-const VIEWS = ['add', 'history', 'charts'];
-let currentViewIdx = 0;
+// ── View switching ──────────────────────────────────────────────────────────
+function getViewWidth() {
+  return document.querySelector('.views-wrapper').offsetWidth;
+}
+
+function snapToView(idx, animate) {
+  const container = document.getElementById('views-container');
+  const vw = getViewWidth();
+  container.style.transition = animate
+    ? 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+    : 'none';
+  container.style.transform = `translateX(-${idx * vw}px)`;
+}
 
 function setView(v) {
   const idx = VIEWS.indexOf(v);
   if (idx === -1) return;
   currentViewIdx = idx;
-  const container = document.getElementById('views-container');
-  container.style.transition = 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
-  const wrapper = container.parentElement;
-  const gapPx = 32;
-  const pct = ((wrapper.offsetWidth + gapPx) / wrapper.offsetWidth) * (idx * 33.333);
-  container.style.transform = `translateX(-${pct}%)`;
+  snapToView(idx, true);
   document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.nav-tab')[idx].classList.add('active');
   if (v === 'history') renderHistory();
   if (v === 'charts') renderChipMarkers();
 }
-// iOS-style swipe navigation
+
+// ── iOS-style swipe ─────────────────────────────────────────────────────────
 (function initSwipe() {
-  const container = document.getElementById('views-container');
-  const wrapper = container.parentElement;
-  let startX = 0;
-  let startY = 0;
-  let currentX = 0;
+  const wrapper = document.querySelector('.views-wrapper');
+  let startX = 0, startY = 0, lastX = 0;
   let isHorizontal = null;
   let active = false;
 
-  function getBaseOffset() {
-    const wrapper = document.getElementById('views-container').parentElement;
-    const gapPx = 32; // 2rem
-    const totalWidth = wrapper.offsetWidth;
-    return currentViewIdx * ((totalWidth + gapPx) / wrapper.offsetWidth) * (100 / 3);
-  }
-
   wrapper.addEventListener('touchstart', e => {
-    startX = e.touches[0].clientX;
+    startX = lastX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     isHorizontal = null;
     active = true;
+    const container = document.getElementById('views-container');
     container.style.transition = 'none';
   }, { passive: true });
 
@@ -511,51 +496,57 @@ function setView(v) {
     if (!active) return;
     const dx = e.touches[0].clientX - startX;
     const dy = e.touches[0].clientY - startY;
+    lastX = e.touches[0].clientX;
 
     if (isHorizontal === null) {
-      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
-        isHorizontal = Math.abs(dx) > Math.abs(dy);
+      if (Math.abs(dx) > 5 || Math.abs(dy) > 5) {
+        isHorizontal = Math.abs(dx) >= Math.abs(dy);
       }
       return;
     }
-
     if (!isHorizontal) return;
 
-    // Clamp: resist dragging past first/last view
-    let newOffset = getBaseOffset() - (dx / wrapper.offsetWidth) * 100 / 3;
+    const vw = getViewWidth();
+    const base = currentViewIdx * vw;
+    let offset = base - dx;
     const min = 0;
-    const max = (VIEWS.length - 1) * (100 / 3);
-    if (newOffset < min) newOffset = min - (min - newOffset) * 0.2;
-    if (newOffset > max) newOffset = max + (newOffset - max) * 0.2;
+    const max = (VIEWS.length - 1) * vw;
+    // Rubber-band resistance at edges
+    if (offset < min) offset = min - (min - offset) * 0.2;
+    if (offset > max) offset = max + (offset - max) * 0.2;
 
-    container.style.transform = `translateX(-${newOffset}%)`;
-    currentX = dx;
+    document.getElementById('views-container').style.transform = `translateX(-${offset}px)`;
   }, { passive: true });
 
   wrapper.addEventListener('touchend', e => {
     if (!active || !isHorizontal) { active = false; return; }
     active = false;
 
-    const dx = e.changedTouches[0].clientX - startX;
-    const threshold = wrapper.offsetWidth * 0.3;
-    const velocity = Math.abs(dx) > 30;
+    const dx = lastX - startX;
+    const vw = getViewWidth();
+    const threshold = vw * 0.3;
 
     let newIdx = currentViewIdx;
-    if ((dx < -threshold || (velocity && dx < -30)) && currentViewIdx < VIEWS.length - 1) newIdx++;
-    if ((dx > threshold  || (velocity && dx > 30))  && currentViewIdx > 0) newIdx--;
+    if (dx < -threshold && currentViewIdx < VIEWS.length - 1) newIdx++;
+    else if (dx > threshold && currentViewIdx > 0) newIdx--;
 
-    setView(VIEWS[newIdx]);
+    currentViewIdx = newIdx;
+    snapToView(newIdx, true);
+    document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-tab')[newIdx].classList.add('active');
+    if (VIEWS[newIdx] === 'history') renderHistory();
+    if (VIEWS[newIdx] === 'charts') renderChipMarkers();
   }, { passive: true });
+
+  window.addEventListener('resize', () => snapToView(currentViewIdx, false));
 })();
-// Init
+
+// ── Init ────────────────────────────────────────────────────────────────────
 (function init() {
   document.getElementById('entry-date').valueAsDate = new Date();
   buildCatPills();
   buildMarkerSelect();
   buildCatFilter();
-  const container = document.getElementById('views-container');
-  container.style.transition = 'none';
-  container.style.transform = 'translateX(0%)';
-  currentViewIdx = 0;
+  snapToView(0, false);
   document.querySelectorAll('.nav-tab')[0].classList.add('active');
 })();
