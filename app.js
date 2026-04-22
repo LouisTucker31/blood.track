@@ -68,7 +68,7 @@ function statusOf(marker, val) {
 }
 
 function statusLabel(s) {
-  if (s === 'normal') return 'Normal';
+  if (s === 'normal') return 'Optimal';
   if (s === 'high') return 'High';
   if (s === 'low') return 'Low';
   return '—';
