@@ -101,6 +101,21 @@ body {
 .view { display: none; }
 .view.active { display: block; }
 
+.views-container {
+  display: flex;
+  width: 300%;
+  will-change: transform;
+}
+.views-container .view {
+  display: block;
+  width: 33.333%;
+  flex-shrink: 0;
+}
+.views-wrapper {
+  overflow: hidden;
+  width: 100%;
+}
+
 /* Add Entry */
 .add-grid {
   display: grid;

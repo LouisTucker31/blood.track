@@ -464,45 +464,81 @@ function exportData() {
   a.click();
 }
 
+const VIEWS = ['add', 'history', 'charts'];
+let currentViewIdx = 0;
+
 function setView(v) {
-  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  const idx = VIEWS.indexOf(v);
+  if (idx === -1) return;
+  currentViewIdx = idx;
+  const container = document.getElementById('views-container');
+  container.style.transition = 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+  container.style.transform = `translateX(-${idx * 33.333}%)`;
   document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
-  document.getElementById('view-' + v).classList.add('active');
-  const idx = ['add','history','charts'].indexOf(v);
   document.querySelectorAll('.nav-tab')[idx].classList.add('active');
   if (v === 'history') renderHistory();
   if (v === 'charts') renderChipMarkers();
 }
-// Swipe navigation
+// iOS-style swipe navigation
 (function initSwipe() {
-  const views = ['add', 'history', 'charts'];
+  const container = document.getElementById('views-container');
+  const wrapper = container.parentElement;
   let startX = 0;
   let startY = 0;
-  let isDragging = false;
+  let currentX = 0;
+  let isHorizontal = null;
+  let active = false;
 
-  document.addEventListener('touchstart', e => {
+  function getBaseOffset() {
+    return currentViewIdx * (100 / 3);
+  }
+
+  wrapper.addEventListener('touchstart', e => {
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
-    isDragging = false;
+    isHorizontal = null;
+    active = true;
+    container.style.transition = 'none';
   }, { passive: true });
 
-  document.addEventListener('touchmove', e => {
-    const dx = Math.abs(e.touches[0].clientX - startX);
-    const dy = Math.abs(e.touches[0].clientY - startY);
-    if (dx > dy && dx > 10) isDragging = true;
+  wrapper.addEventListener('touchmove', e => {
+    if (!active) return;
+    const dx = e.touches[0].clientX - startX;
+    const dy = e.touches[0].clientY - startY;
+
+    if (isHorizontal === null) {
+      if (Math.abs(dx) > 6 || Math.abs(dy) > 6) {
+        isHorizontal = Math.abs(dx) > Math.abs(dy);
+      }
+      return;
+    }
+
+    if (!isHorizontal) return;
+
+    // Clamp: resist dragging past first/last view
+    let newOffset = getBaseOffset() - (dx / wrapper.offsetWidth) * 100 / 3;
+    const min = 0;
+    const max = (VIEWS.length - 1) * (100 / 3);
+    if (newOffset < min) newOffset = min - (min - newOffset) * 0.2;
+    if (newOffset > max) newOffset = max + (newOffset - max) * 0.2;
+
+    container.style.transform = `translateX(-${newOffset}%)`;
+    currentX = dx;
   }, { passive: true });
 
-  document.addEventListener('touchend', e => {
-    if (!isDragging) return;
+  wrapper.addEventListener('touchend', e => {
+    if (!active || !isHorizontal) { active = false; return; }
+    active = false;
+
     const dx = e.changedTouches[0].clientX - startX;
-    const dy = Math.abs(e.changedTouches[0].clientY - startY);
-    if (Math.abs(dx) < 50 || dy > 80) return;
+    const threshold = wrapper.offsetWidth * 0.3;
+    const velocity = Math.abs(dx) > 30;
 
-    const currentView = views.find(v => document.getElementById('view-' + v).classList.contains('active'));
-    const currentIdx = views.indexOf(currentView);
+    let newIdx = currentViewIdx;
+    if ((dx < -threshold || (velocity && dx < -30)) && currentViewIdx < VIEWS.length - 1) newIdx++;
+    if ((dx > threshold  || (velocity && dx > 30))  && currentViewIdx > 0) newIdx--;
 
-    if (dx < 0 && currentIdx < views.length - 1) setView(views[currentIdx + 1]); // swipe left → next
-    if (dx > 0 && currentIdx > 0) setView(views[currentIdx - 1]);                // swipe right → prev
+    setView(VIEWS[newIdx]);
   }, { passive: true });
 })();
 // Init
@@ -511,4 +547,8 @@ function setView(v) {
   buildCatPills();
   buildMarkerSelect();
   buildCatFilter();
+  const container = document.getElementById('views-container');
+  container.style.transition = 'none';
+  container.style.transform = 'translateX(0%)';
+  document.querySelectorAll('.nav-tab')[0].classList.add('active');
 })();
