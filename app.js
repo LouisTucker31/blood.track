@@ -277,9 +277,21 @@ function enterPanelMode(markers, meta) {
   document.getElementById('single-marker-form').style.display = 'none';
   document.getElementById('panel-form').style.display = 'block';
   document.getElementById('panel-test-name').textContent = meta.name;
+  const delBtn = document.getElementById('panel-delete-tmpl-btn');
+  if (delBtn) delBtn.style.display = meta.preset ? 'none' : 'flex';
   document.getElementById('panel-date').valueAsDate = new Date();
   document.getElementById('panel-notes').value = '';
   renderPanelRows();
+}
+
+function deletePanelTemplate() {
+  if (!panelTemplateMeta || panelTemplateMeta.preset) return;
+  if (!confirm(`Delete the "${panelTemplateMeta.name}" template? This won't affect already saved results.`)) return;
+  customTemplates = customTemplates.filter(t => t.id !== panelTemplateMeta.id);
+  saveTemplates();
+  exitPanelMode();
+  buildCatPills();
+  showToast('Template deleted.');
 }
 
 function exitPanelMode() {
