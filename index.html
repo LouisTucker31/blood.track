@@ -33,7 +33,6 @@
               <div class="panel-test-name" id="panel-test-name"></div>
               <button class="panel-back-btn" onclick="exitPanelMode()">← Single marker</button>
             </div>
-            <button class="btn-icon panel-delete-tmpl-btn" id="panel-delete-tmpl-btn" style="display:none;" onclick="deletePanelTemplate()" title="Delete test">🗑</button>
             <div class="field panel-date-field">
               <label>Date</label>
               <input type="date" id="panel-date" />
@@ -65,7 +64,10 @@
             <button class="panel-add-extra-btn" onclick="addPanelExtraRow()">+ Add extra marker</button>
           </div>
 
-          <button class="btn-primary" onclick="savePanelTest()">Save Test</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-primary" onclick="savePanelTest()">Save Test</button>
+            <button class="btn-primary panel-delete-tmpl-btn" id="panel-delete-tmpl-btn" style="display:none;background:var(--red);flex:0 0 auto;width:auto;padding:0 18px;" onclick="deletePanelTemplate()">Delete Test</button>
+          </div>
         </div>
 
         <!-- SINGLE MARKER FORM (existing) -->

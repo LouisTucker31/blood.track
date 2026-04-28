@@ -447,17 +447,7 @@ body {
   background: var(--accent-light);
 }
 .cat-pill--new:hover { opacity: 0.8; }
-.cat-pill--custom { font-style: italic; display: inline-flex; align-items: center; gap: 5px; }
-.pill-edit-btn {
-  font-style: normal;
-  font-size: 11px;
-  opacity: 0.5;
-  line-height: 1;
-  padding: 1px 3px;
-  border-radius: 3px;
-  transition: opacity 0.15s;
-}
-.pill-edit-btn:hover { opacity: 1; }
+.cat-pill--custom { font-style: italic; }
 .cat-pill--preset {
   border-color: rgba(0, 150, 136, 0.35);
   background: rgba(0, 150, 136, 0.08);

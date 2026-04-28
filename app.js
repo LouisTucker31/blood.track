@@ -242,7 +242,7 @@ function buildCatPills() {
   }).join('');
   const custom = customTemplates.map(t => {
     const isActive = selectedCat === '__tmpl__' + t.id;
-    return `<button class="cat-pill cat-pill--custom${isActive ? ' active' : ''}" data-tmpl-id="${t.id}" onclick="selectTemplate(this.dataset.tmplId)">${t.name}<span class="pill-edit-btn" onclick="event.stopPropagation();openTemplateModal('${t.id}')" title="Edit">✎</span></button>`;
+    return `<button class="cat-pill cat-pill--custom${isActive ? ' active' : ''}" data-tmpl-id="${t.id}" onclick="selectTemplate(this.dataset.tmplId)">${t.name}</button>`;
   }).join('');
   const addBtn = `<button class="cat-pill cat-pill--new" onclick="openTemplateModal()">+ New Test</button>`;
   el.innerHTML = builtIn + presets + custom + addBtn;
