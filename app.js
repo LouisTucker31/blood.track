@@ -307,14 +307,7 @@ function confirmPanelExtraRow() {
   renderPanelRows();
   document.getElementById('panel-extra-picker').style.display = 'none';
 }
-function deletePanelTemplate() {
-  if (!panelTemplateMeta.id) return;
-  if (!confirm(`Delete the "${panelTemplateMeta.name}" template? This won't affect already saved results.`)) return;
-  customTemplates = customTemplates.filter(t => t.id !== panelTemplateMeta.id);
-  saveTemplates();
-  showToast('Template deleted.');
-  exitPanelMode();
-}
+
 function savePanelTest() {
   const date = document.getElementById('panel-date').value;
   const notes = document.getElementById('panel-notes').value.trim();
