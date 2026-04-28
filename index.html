@@ -64,9 +64,9 @@
             <button class="panel-add-extra-btn" onclick="addPanelExtraRow()">+ Add extra marker</button>
           </div>
 
-          <div style="display:flex;gap:8px;">
-            <button class="btn-primary" onclick="savePanelTest()">Save Test</button>
-            <button class="btn-primary panel-delete-tmpl-btn" id="panel-delete-tmpl-btn" style="display:none;background:var(--red);flex:0 0 auto;width:auto;padding:0 18px;" onclick="deletePanelTemplate()">Delete Test</button>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn-primary" style="flex:1;" onclick="savePanelTest()">Save Test</button>
+            <button class="panel-delete-tmpl-btn" id="panel-delete-tmpl-btn" style="display:none;flex:0 0 auto;height:44px;padding:0 18px;border-radius:var(--radius);border:1px solid var(--red);background:none;color:var(--red);font-size:14px;font-weight:600;cursor:pointer;" onclick="deletePanelTemplate()">Delete</button>
           </div>
         </div>
 
