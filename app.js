@@ -815,14 +815,54 @@ function renderChart(markerName) {
 }
 
 function exportData() {
-  const headers = ['Marker', 'Category', 'Value', 'Date', 'Notes'];
-  const rows = entries.map(e => [e.marker, e.cat, e.value, e.date, e.notes || '']);
-  const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'blood-tracker-export.csv';
-  a.click();
+  if (!entries.length) { showToast('No data to export.'); return; }
+
+  // group entries by category
+  const byCat = {};
+  entries.forEach(e => {
+    if (!byCat[e.cat]) byCat[e.cat] = [];
+    byCat[e.cat].push(e);
+  });
+
+  const sections = Object.entries(byCat).map(([cat, catEntries]) => {
+    const rows = catEntries
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .map(e => {
+        const m = getMarker(e.marker);
+        const unit = e.unit || (m ? m.unit : '');
+        const lo = m && m.low !== null && m.low > 0 ? fmt(m.low) : '—';
+        const hi = m && m.high !== null ? fmt(m.high) : '—';
+        const s = statusOf(m, e.value);
+        const statusClass = s === 'normal' ? 'pr-normal' : s === 'high' ? 'pr-high' : s === 'low' ? 'pr-low' : 'pr-na';
+        const statusText = statusLabel(s);
+        return `<tr>
+          <td>${e.marker}</td>
+          <td style="font-family:'DM Mono',monospace;">${fmt(e.value)} ${unit}</td>
+          <td style="font-family:'DM Mono',monospace;">${lo}${lo !== '—' || hi !== '—' ? ' – ' + (hi !== '—' ? hi : '∞') + ' ' + unit : '—'}</td>
+          <td><span class="pr-status ${statusClass}">${statusText}</span></td>
+          <td>${formatDate(e.date)}</td>
+          <td style="color:#7a7060;">${e.notes || ''}</td>
+        </tr>`;
+      }).join('');
+    return `<div class="pr-section">
+      <div class="pr-section-title">${cat}</div>
+      <table>
+        <thead><tr><th>Marker</th><th>Result</th><th>Optimal Range</th><th>Status</th><th>Date</th><th>Notes</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+  }).join('');
+
+  const now = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+  document.getElementById('print-root').innerHTML = `
+    <h1>blood<span style="color:#c8460a;">.</span>track</h1>
+    <div class="pr-meta">Exported ${now} · ${entries.length} result${entries.length !== 1 ? 's' : ''}</div>
+    ${sections}
+    <div class="pr-footer">Reference ranges are general adult values and may vary by lab, age, and sex. This report is for personal tracking only.</div>
+  `;
+  document.getElementById('print-root').style.display = 'block';
+  window.print();
+  document.getElementById('print-root').style.display = 'none';
 }
 
 // ── View switching ──────────────────────────────────────────────────────────
