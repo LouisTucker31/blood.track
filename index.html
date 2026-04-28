@@ -205,4 +205,15 @@
   #print-root .pr-high { background: #fdecea; color: #b5281e; }
   #print-root .pr-low { background: #fef6e4; color: #9a5c08; }
   #print-root .pr-na { color: #b0a898; }
-  #print-root .pr-footer { margin-top: 40px; font-size: 11px; col
+  #print-root .pr-footer { margin-top: 40px; font-size: 11px; color: #b0a898; border-top: 1px solid #eee; padding-top: 12px; }
+}
+</style>
+<div id="print-root" style="display:none;"></div>
+<script src="app.js?v=2"></script>
+<script>
+  function handleBackdropClick(e) {
+    if (e.target.id === 'template-modal') closeTemplateModal();
+  }
+</script>
+</body>
+</html>
