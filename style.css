@@ -446,6 +446,16 @@ body {
 }
 .cat-pill--new:hover { opacity: 0.8; }
 .cat-pill--custom { font-style: italic; }
+.cat-pill--preset {
+  border-color: rgba(0, 150, 136, 0.35);
+  background: rgba(0, 150, 136, 0.08);
+  color: #00796b;
+}
+.cat-pill--preset.active {
+  background: rgba(0, 150, 136, 0.15);
+  border-color: #00796b;
+  color: #00796b;
+}
 
 .template-modal-backdrop {
   display: none;

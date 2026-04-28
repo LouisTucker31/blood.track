@@ -67,6 +67,71 @@ const MARKERS = [
   { name:'Nucleated Red Blood Cells', cat:'Full Blood Count', unit:'10⁹/L', low:0, high:0.01 },
 ];
 
+const PRESET_TEMPLATES = [
+  {
+    id: 'preset_randox',
+    name: 'Randox Health Panel',
+    preset: true,
+    markers: [
+      { name:'Testosterone (total)', unit:'nmol/L' },
+      { name:'Free Testosterone', unit:'nmol/L' },
+      { name:'Oestradiol (E2)', unit:'pmol/L' },
+      { name:'SHBG', unit:'nmol/L' },
+      { name:'LH', unit:'IU/L' },
+      { name:'FSH', unit:'IU/L' },
+      { name:'Prolactin', unit:'mIU/L' },
+      { name:'Albumin', unit:'g/L' },
+    ]
+  },
+  {
+    id: 'preset_nhs',
+    name: 'NHS Panel',
+    preset: true,
+    markers: [
+      { name:'TSH', unit:'mIU/L' },
+      { name:'Free T4', unit:'pmol/L' },
+      { name:'Vitamin D (25-hydroxy)', unit:'nmol/L' },
+      { name:'Total Cholesterol', unit:'mmol/L' },
+      { name:'HDL Cholesterol', unit:'mmol/L' },
+      { name:'LDL Cholesterol', unit:'mmol/L' },
+      { name:'Non-HDL Cholesterol', unit:'mmol/L' },
+      { name:'Triglycerides', unit:'mmol/L' },
+      { name:'Cholesterol/HDL Ratio', unit:'ratio' },
+      { name:'Immunoglobulin G (IgG)', unit:'g/L' },
+      { name:'Immunoglobulin A (IgA)', unit:'g/L' },
+      { name:'Immunoglobulin M (IgM)', unit:'g/L' },
+      { name:'Folate', unit:'µg/L' },
+      { name:'Sodium', unit:'mmol/L' },
+      { name:'Potassium', unit:'mmol/L' },
+      { name:'Urea', unit:'mmol/L' },
+      { name:'Creatinine', unit:'µmol/L' },
+      { name:'eGFR', unit:'mL/min/1.73m²' },
+      { name:'Ferritin', unit:'µg/L' },
+      { name:'ALT', unit:'U/L' },
+      { name:'Bilirubin (total)', unit:'µmol/L' },
+      { name:'White Blood Cells', unit:'10⁹/L' },
+      { name:'Haemoglobin', unit:'g/L' },
+      { name:'Platelets', unit:'10⁹/L' },
+      { name:'Red Blood Cells', unit:'10¹²/L' },
+      { name:'Haematocrit', unit:'L/L' },
+      { name:'MCV', unit:'fL' },
+      { name:'MCH', unit:'pg' },
+      { name:'MCHC', unit:'g/L' },
+      { name:'Neutrophils', unit:'10⁹/L' },
+      { name:'Lymphocytes', unit:'10⁹/L' },
+      { name:'Monocytes', unit:'10⁹/L' },
+      { name:'Eosinophils', unit:'10⁹/L' },
+      { name:'Basophils', unit:'10⁹/L' },
+      { name:'Nucleated Red Blood Cells', unit:'10⁹/L' },
+      { name:'Adjusted Calcium', unit:'mmol/L' },
+      { name:'Albumin', unit:'g/L' },
+      { name:'Alkaline Phosphatase', unit:'U/L' },
+      { name:'Calcium', unit:'mmol/L' },
+      { name:'Vitamin B12', unit:'ng/L' },
+    ]
+  },
+];
+
 const CATS = [...new Set(MARKERS.map(m => m.cat))];
 const VIEWS = ['add', 'history', 'charts'];
 let entries = JSON.parse(localStorage.getItem('bt_entries') || '[]');
@@ -171,12 +236,16 @@ function buildCatPills() {
   const builtIn = CATS.map(c =>
     `<button class="cat-pill${c === selectedCat ? ' active' : ''}" onclick="selectCat('${c}')">${c}</button>`
   ).join('');
+  const presets = PRESET_TEMPLATES.map(t => {
+    const isActive = selectedCat === '__tmpl__' + t.id;
+    return `<button class="cat-pill cat-pill--preset${isActive ? ' active' : ''}" data-tmpl-id="${t.id}" onclick="selectTemplate(this.dataset.tmplId)">${t.name}</button>`;
+  }).join('');
   const custom = customTemplates.map(t => {
     const isActive = selectedCat === '__tmpl__' + t.id;
     return `<button class="cat-pill cat-pill--custom${isActive ? ' active' : ''}" data-tmpl-id="${t.id}" onclick="selectTemplate(this.dataset.tmplId)">${t.name}</button>`;
   }).join('');
   const addBtn = `<button class="cat-pill cat-pill--new" onclick="openTemplateModal()">+ New Test</button>`;
-  el.innerHTML = builtIn + custom + addBtn;
+  el.innerHTML = builtIn + presets + custom + addBtn;
 }
 
 function selectCat(cat) {
@@ -186,7 +255,7 @@ function selectCat(cat) {
 }
 function selectTemplate(id) {
   console.log('selectTemplate called with id:', id, 'templates:', customTemplates);
-  const tmpl = customTemplates.find(t => t.id === id);
+  const tmpl = [...PRESET_TEMPLATES, ...customTemplates].find(t => t.id === id);
   if (!tmpl) { showToast('Template not found.'); return; }
   selectedCat = '__tmpl__' + id;
   buildCatPills();
