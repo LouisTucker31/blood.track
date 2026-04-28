@@ -441,9 +441,13 @@ function renderSingleRow(e) {
   const m = getMarker(e.marker);
   const s = statusOf(m, e.value);
   const unit = e.unit || (m ? m.unit : '');
-  return `<div class="result-row">
+  return `<div class="result-row" id="row-${e.id}">
     <div><div class="result-marker">${e.marker}</div><div class="result-cat">${e.cat}</div></div>
-    <div class="result-val">${fmt(e.value)} <span style="font-size:11px;color:var(--text-hint);font-weight:400;">${unit}</span> <span class="status-badge status-${s}">${statusLabel(s)}</span></div>
+    <div class="result-val">
+      <input class="inline-edit-val" type="number" step="any" value="${e.value}" onchange="saveInlineValue(${e.id}, this.value)" />
+      <span style="font-size:11px;color:var(--text-hint);font-weight:400;">${unit}</span>
+      <span class="status-badge status-${s}" id="badge-${e.id}">${statusLabel(s)}</span>
+    </div>
     <div class="result-date">${formatDate(e.date)}</div>
     <div></div>
     <button class="btn-icon" onclick="deleteEntry(${e.id})" title="Delete">✕</button>
@@ -455,12 +459,18 @@ function renderRunTile(run, runEntries) {
     const m = getMarker(e.marker);
     const s = statusOf(m, e.value);
     const unit = e.unit || (m ? m.unit : '');
-    return `<div class="result-child-row">
+    return `<div class="result-child-row" id="row-${e.id}">
       <div><div class="result-marker">${e.marker}</div><div class="result-cat">${e.cat}</div></div>
-      <div class="result-val">${fmt(e.value)} <span style="font-size:11px;color:var(--text-hint);font-weight:400;">${unit}</span> <span class="status-badge status-${s}">${statusLabel(s)}</span></div>
+      <div class="result-val">
+        <input class="inline-edit-val" type="number" step="any" value="${e.value}" onchange="saveInlineValue(${e.id}, this.value)" />
+        <span style="font-size:11px;color:var(--text-hint);font-weight:400;">${unit}</span>
+        <span class="status-badge status-${s}" id="badge-${e.id}">${statusLabel(s)}</span>
+      </div>
       <button class="btn-icon" onclick="deleteEntry(${e.id});rerenderRunOrRemove('${run.id}')" title="Delete">✕</button>
     </div>`;
   }).join('');
+
+  const noteVal = run.notes || '';
 
   return `<div class="run-tile" id="run-${run.id}">
     <div class="run-tile-header" onclick="toggleRunTile('${run.id}')">
@@ -474,9 +484,36 @@ function renderRunTile(run, runEntries) {
       </div>
     </div>
     <div class="run-tile-body" id="run-body-${run.id}">
+      <div class="run-tile-note-row">
+        <input class="run-tile-note-input" type="text" placeholder="Add a note for this test…" value="${noteVal.replace(/"/g, '&quot;')}" onchange="saveRunNote('${run.id}', this.value)" onclick="event.stopPropagation()" />
+      </div>
       <div class="run-tile-children">${childRows}</div>
     </div>
   </div>`;
+}
+
+function saveInlineValue(id, newVal) {
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  entry.value = newVal;
+  save();
+  const m = getMarker(entry.marker);
+  const s = statusOf(m, newVal);
+  const badge = document.getElementById(`badge-${id}`);
+  if (badge) {
+    badge.className = `status-badge status-${s}`;
+    badge.textContent = statusLabel(s);
+  }
+  showToast('Value updated.');
+  renderChipMarkers();
+}
+
+function saveRunNote(runId, note) {
+  const run = testRuns.find(r => r.id === runId);
+  if (!run) return;
+  run.notes = note;
+  saveTestRuns();
+  showToast('Note saved.');
 }
 
 function toggleRunTile(id) {
