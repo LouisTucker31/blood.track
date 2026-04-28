@@ -47,77 +47,33 @@ const MARKERS = [
   { name:'White Blood Cells', cat:'Full Blood Count', unit:'10⁹/L', low:4.0, high:11.0 },
   { name:'Platelets', cat:'Full Blood Count', unit:'10⁹/L', low:150, high:400 },
   { name:'PSA', cat:'Prostate', unit:'µg/L', low:0, high:4.0 },
+  { name:'Cholesterol/HDL Ratio', cat:'Lipid Panel', unit:'ratio', low:0, high:4.0 },
+  { name:'Immunoglobulin G (IgG)', cat:'Immunology', unit:'g/L', low:7.0, high:16.0 },
+  { name:'Immunoglobulin A (IgA)', cat:'Immunology', unit:'g/L', low:0.7, high:4.0 },
+  { name:'Immunoglobulin M (IgM)', cat:'Immunology', unit:'g/L', low:0.4, high:2.3 },
+  { name:'Sodium', cat:'Electrolytes', unit:'mmol/L', low:136, high:145 },
+  { name:'Potassium', cat:'Electrolytes', unit:'mmol/L', low:3.5, high:5.1 },
+  { name:'Calcium', cat:'Bone & Minerals', unit:'mmol/L', low:2.2, high:2.6 },
+  { name:'Adjusted Calcium', cat:'Bone & Minerals', unit:'mmol/L', low:2.2, high:2.6 },
+  { name:'MCV', cat:'Full Blood Count', unit:'fL', low:80, high:100 },
+  { name:'MCH', cat:'Full Blood Count', unit:'pg', low:27, high:33 },
+  { name:'MCHC', cat:'Full Blood Count', unit:'g/L', low:315, high:360 },
+  { name:'Neutrophils', cat:'Full Blood Count', unit:'10⁹/L', low:1.8, high:7.5 },
+  { name:'Lymphocytes', cat:'Full Blood Count', unit:'10⁹/L', low:1.0, high:4.5 },
+  { name:'Monocytes', cat:'Full Blood Count', unit:'10⁹/L', low:0.2, high:1.0 },
+  { name:'Eosinophils', cat:'Full Blood Count', unit:'10⁹/L', low:0.0, high:0.5 },
+  { name:'Basophils', cat:'Full Blood Count', unit:'10⁹/L', low:0.0, high:0.1 },
+  { name:'Nucleated Red Blood Cells', cat:'Full Blood Count', unit:'10⁹/L', low:0, high:0.01 },
 ];
 
 const CATS = [...new Set(MARKERS.map(m => m.cat))];
 const VIEWS = ['add', 'history', 'charts'];
 let entries = JSON.parse(localStorage.getItem('bt_entries') || '[]');
-let customTemplates = JSON.parse(localStorage.getItem('bt_templates') || '[]');
-function saveTemplates() { localStorage.setItem('bt_templates', JSON.stringify(customTemplates)); }
-let testRuns = JSON.parse(localStorage.getItem('bt_test_runs') || '[]');
-function saveTestRuns() { localStorage.setItem('bt_test_runs', JSON.stringify(testRuns)); }
-
-// panel mode state
-let panelMode = false;
-let panelMarkers = []; // { name, unit, cat, low, high }
-let panelTemplateMeta = { id: null, name: '' };
 let selectedCat = CATS[0];
 let activeChipMarker = null;
 let currentViewIdx = 0;
 
 function save() { localStorage.setItem('bt_entries', JSON.stringify(entries)); }
-
-// ── Storage helpers ──────────────────────────────────────────────────────────
-
-function saveMarkerResult({ marker, cat, value, unit, date, notes, testRunId, testName }) {
-  const m = getMarker(marker);
-  const entry = {
-    id: Date.now() + Math.floor(Math.random() * 1000),
-    marker,
-    cat: cat || (m ? m.cat : 'Custom'),
-    value,
-    unit: unit || (m ? m.unit : ''),
-    date,
-    notes: notes || '',
-    testRunId: testRunId || null,
-    testName: testName || null
-  };
-  entries.push(entry);
-  save();
-  return entry;
-}
-
-function saveTestPanel({ templateId, testName, date, notes, markers }) {
-  const runId = 'run_' + Date.now();
-  const markerIds = [];
-
-  markers.forEach((r, i) => {
-    const entry = saveMarkerResult({
-      marker: r.name,
-      cat: r.cat,
-      value: r.value,
-      unit: r.unit,
-      date,
-      notes,
-      testRunId: runId,
-      testName
-    });
-    markerIds.push(entry.id);
-  });
-
-  const run = { id: runId, templateId: templateId || null, testName, date, notes, markerIds };
-  testRuns.push(run);
-  saveTestRuns();
-  return run;
-}
-
-function getAllResults() {
-  return JSON.parse(localStorage.getItem('bt_entries') || '[]');
-}
-
-function getAllTestPanels() {
-  return JSON.parse(localStorage.getItem('bt_test_runs') || '[]');
-}
 function getMarker(name) { return MARKERS.find(m => m.name === name); }
 
 function statusOf(marker, val) {
@@ -150,15 +106,9 @@ function showToast(msg) {
 
 function buildCatPills() {
   const el = document.getElementById('cat-pills');
-  const builtIn = CATS.map(c =>
+  el.innerHTML = CATS.map(c =>
     `<button class="cat-pill${c === selectedCat ? ' active' : ''}" onclick="selectCat('${c}')">${c}</button>`
   ).join('');
-  const custom = customTemplates.map(t => {
-    const isActive = selectedCat === '__tmpl__' + t.id;
-    return `<button class="cat-pill cat-pill--custom${isActive ? ' active' : ''}" data-tmpl-id="${t.id}" onclick="selectTemplate(this.dataset.tmplId)">${t.name}</button>`;
-  }).join('');
-  const addBtn = `<button class="cat-pill cat-pill--new" onclick="openTemplateModal()">+ New Test</button>`;
-  el.innerHTML = builtIn + custom + addBtn;
 }
 
 function selectCat(cat) {
@@ -166,14 +116,7 @@ function selectCat(cat) {
   buildCatPills();
   buildMarkerSelect();
 }
-function selectTemplate(id) {
-  console.log('selectTemplate called with id:', id, 'templates:', customTemplates);
-  const tmpl = customTemplates.find(t => t.id === id);
-  if (!tmpl) { showToast('Template not found.'); return; }
-  selectedCat = '__tmpl__' + id;
-  buildCatPills();
-  enterPanelMode(tmpl.markers.map(m => ({ ...m })), { id: tmpl.id, name: tmpl.name });
-}
+
 function buildMarkerSelect() {
   const sel = document.getElementById('marker-select');
   const markers = MARKERS.filter(m => m.cat === selectedCat);
@@ -181,141 +124,9 @@ function buildMarkerSelect() {
   onMarkerChange();
 }
 
-// ── Panel mode ──────────────────────────────────────────────────────────────
-
-function enterPanelMode(markers, meta) {
-  panelMode = true;
-  panelMarkers = markers.map(m => ({ ...m }));
-  panelTemplateMeta = meta;
-  document.getElementById('single-marker-form').style.display = 'none';
-  document.getElementById('panel-form').style.display = 'block';
-  document.getElementById('panel-test-name').textContent = meta.name;
-  document.getElementById('panel-date').valueAsDate = new Date();
-  document.getElementById('panel-notes').value = '';
-  renderPanelRows();
-}
-
-function exitPanelMode() {
-  panelMode = false;
-  panelMarkers = [];
-  selectedCat = CATS[0];
-  buildCatPills();
-  buildMarkerSelect();
-  document.getElementById('panel-form').style.display = 'none';
-  document.getElementById('single-marker-form').style.display = 'block';
-}
-
-function renderPanelRows() {
-  const el = document.getElementById('panel-rows');
-  el.innerHTML = panelMarkers.map((m, i) => `
-    <div class="panel-row" id="panel-row-${i}">
-      <div class="panel-row-label">
-        <span class="panel-marker-name">${m.name}</span>
-        <span class="panel-marker-cat">${m.cat || ''}</span>
-      </div>
-      <div class="panel-row-inputs">
-        <input
-          type="number"
-          step="any"
-          class="panel-value-input"
-          id="panel-val-${i}"
-          placeholder="—"
-          autocomplete="off"
-        />
-        <select class="panel-unit-select" id="panel-unit-${i}">
-          ${getPanelUnitOptions(m)}
-        </select>
-        <button class="btn-icon panel-row-remove" onclick="removePanelRow(${i})" title="Remove">✕</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function getPanelUnitOptions(m) {
-  const unit = m.unit || '';
-  const allUnits = [...new Set(
-    MARKERS.filter(mk => mk.name === m.name).map(mk => mk.unit).concat(unit ? [unit] : [])
-  )].filter(Boolean);
-  if (!allUnits.length) return `<option value="">—</option>`;
-  return allUnits.map(u => `<option value="${u}"${u === unit ? ' selected' : ''}>${u}</option>`).join('');
-}
-
-function removePanelRow(i) {
-  panelMarkers.splice(i, 1);
-  renderPanelRows();
-}
-
-function addPanelExtraRow() {
-  const el = document.getElementById('panel-extra-picker');
-  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
-  if (el.style.display === 'flex') {
-    const sel = document.getElementById('panel-extra-marker-sel');
-    sel.innerHTML = '<option value="">— Select marker —</option>' +
-      MARKERS.map(m => `<option value="${m.name}">${m.name} (${m.cat})</option>`).join('');
-    document.getElementById('panel-extra-unit-sel').innerHTML = '<option value="">—</option>';
-  }
-}
-
-function onPanelExtraMarkerChange() {
-  const name = document.getElementById('panel-extra-marker-sel').value;
-  const unitSel = document.getElementById('panel-extra-unit-sel');
-  const m = MARKERS.find(mk => mk.name === name);
-  unitSel.innerHTML = m
-    ? `<option value="${m.unit}">${m.unit}</option>`
-    : '<option value="">—</option>';
-}
-
-function confirmPanelExtraRow() {
-  const name = document.getElementById('panel-extra-marker-sel').value;
-  const unit = document.getElementById('panel-extra-unit-sel').value;
-  if (!name) { showToast('Select a marker first.'); return; }
-  const m = MARKERS.find(mk => mk.name === name) || { name, unit, cat: 'Custom', low: null, high: null };
-  panelMarkers.push({ ...m, unit: unit || m.unit });
-  renderPanelRows();
-  document.getElementById('panel-extra-picker').style.display = 'none';
-}
-function deletePanelTemplate() {
-  if (!panelTemplateMeta.id) return;
-  if (!confirm(`Delete the "${panelTemplateMeta.name}" template? This won't affect already saved results.`)) return;
-  customTemplates = customTemplates.filter(t => t.id !== panelTemplateMeta.id);
-  saveTemplates();
-  showToast('Template deleted.');
-  exitPanelMode();
-}
-function savePanelTest() {
-  const date = document.getElementById('panel-date').value;
-  const notes = document.getElementById('panel-notes').value.trim();
-  if (!date) { showToast('Please set a date.'); return; }
-
-  const filled = panelMarkers.map((m, i) => ({
-    name: m.name,
-    cat: m.cat || 'Custom',
-    value: document.getElementById(`panel-val-${i}`)?.value?.trim() || '',
-    unit: document.getElementById(`panel-unit-${i}`)?.value || m.unit || ''
-  })).filter(r => r.value !== '');
-
-  if (!filled.length) { showToast('Enter at least one value.'); return; }
-
-  const run = saveTestPanel({
-    templateId: panelTemplateMeta.id,
-    testName: panelTemplateMeta.name,
-    date,
-    notes,
-    markers: filled
-  });
-
-  showToast(`${panelTemplateMeta.name} saved — ${filled.length} marker${filled.length !== 1 ? 's' : ''} recorded.`);
-  exitPanelMode();
-}
-
 function onMarkerChange() {
   const name = document.getElementById('marker-select').value;
-  let m = getMarker(name);
-  if (!m && selectedCat.startsWith('__tmpl__')) {
-    const id = selectedCat.replace('__tmpl__', '');
-    const tmpl = customTemplates.find(t => t.id === id);
-    m = tmpl ? tmpl.markers.find(mk => mk.name === name) : null;
-  }
+  const m = getMarker(name);
   if (!m) return;
   document.getElementById('unit-display').textContent = `Unit: ${m.unit}`;
   const lo = m.low !== null ? fmt(m.low) : '—';
@@ -342,26 +153,14 @@ function buildRefCard(m) {
 }
 
 function addEntry() {
-  if (panelMode) return; // safety guard
   const name = document.getElementById('marker-select').value;
   const val = document.getElementById('entry-value').value;
   const date = document.getElementById('entry-date').value;
   const notes = document.getElementById('entry-notes').value.trim();
   if (!name || !val || !date) { showToast('Please fill in marker, value and date.'); return; }
-  let m = getMarker(name);
-  if (!m && selectedCat.startsWith('__tmpl__')) {
-    const id = selectedCat.replace('__tmpl__', '');
-    const tmpl = customTemplates.find(t => t.id === id);
-    m = tmpl ? tmpl.markers.find(mk => mk.name === name) : null;
-  }
-  saveMarkerResult({
-    marker: name,
-    cat: m ? (m.cat || 'Custom') : 'Custom',
-    value: val,
-    unit: m ? m.unit : '',
-    date,
-    notes
-  });
+  const m = getMarker(name);
+  entries.push({ id: Date.now(), marker: name, cat: m ? m.cat : '', value: val, date, notes });
+  save();
   document.getElementById('entry-value').value = '';
   document.getElementById('entry-notes').value = '';
   showToast('Result saved!');
@@ -378,120 +177,34 @@ function renderHistory() {
   const search = document.getElementById('search-input').value.toLowerCase();
   const catF = document.getElementById('cat-filter').value;
   const sort = document.getElementById('sort-select').value;
+
+  let filtered = entries.filter(e => {
+    if (search && !e.marker.toLowerCase().includes(search)) return false;
+    if (catF && e.cat !== catF) return false;
+    return true;
+  });
+
+  if (sort === 'date-desc') filtered.sort((a,b) => b.date.localeCompare(a.date));
+  else if (sort === 'date-asc') filtered.sort((a,b) => a.date.localeCompare(b.date));
+  else filtered.sort((a,b) => a.marker.localeCompare(b.marker));
+
   const el = document.getElementById('results-list');
-
-  let items = [];
-
-  // add grouped test runs
-  testRuns.forEach(run => {
-    const runEntries = entries.filter(e => run.markerIds.includes(e.id));
-    if (!runEntries.length) return;
-    if (search && !run.testName.toLowerCase().includes(search) &&
-        !runEntries.some(e => e.marker.toLowerCase().includes(search))) return;
-    if (catF && !runEntries.some(e => e.cat === catF)) return;
-    items.push({ type: 'run', run, entries: runEntries, sortDate: run.date });
-  });
-
-  // add standalone entries (not part of any run)
-  entries.filter(e => !e.testRunId).forEach(e => {
-    if (search && !e.marker.toLowerCase().includes(search)) return;
-    if (catF && e.cat !== catF) return;
-    items.push({ type: 'single', entry: e, sortDate: e.date });
-  });
-
-  // sort
-  if (sort === 'date-desc') items.sort((a,b) => b.sortDate.localeCompare(a.sortDate));
-  else if (sort === 'date-asc') items.sort((a,b) => a.sortDate.localeCompare(b.sortDate));
-  else items.sort((a,b) => {
-    const nameA = a.type === 'run' ? a.run.testName : a.entry.marker;
-    const nameB = b.type === 'run' ? b.run.testName : b.entry.marker;
-    return nameA.localeCompare(nameB);
-  });
-
-  if (!items.length) {
+  if (!filtered.length) {
     el.innerHTML = `<div class="empty-state"><div class="big">◎</div><p>${entries.length ? 'No results match your filter.' : 'No results yet. Add your first entry.'}</p></div>`;
     return;
   }
-
-  el.innerHTML = items.map(item => {
-    if (item.type === 'run') return renderRunTile(item.run, item.entries);
-    return renderSingleRow(item.entry);
-  }).join('');
-}
-
-function renderSingleRow(e) {
-  const m = getMarker(e.marker);
-  const s = statusOf(m, e.value);
-  const unit = e.unit || (m ? m.unit : '');
-  return `<div class="result-row">
-    <div><div class="result-marker">${e.marker}</div><div class="result-cat">${e.cat}</div></div>
-    <div class="result-val">${fmt(e.value)} <span style="font-size:11px;color:var(--text-hint);font-weight:400;">${unit}</span> <span class="status-badge status-${s}">${statusLabel(s)}</span></div>
-    <div class="result-date">${formatDate(e.date)}</div>
-    <div></div>
-    <button class="btn-icon" onclick="deleteEntry(${e.id})" title="Delete">✕</button>
-  </div>`;
-}
-
-function renderRunTile(run, runEntries) {
-  const childRows = runEntries.map(e => {
+  el.innerHTML = filtered.map(e => {
     const m = getMarker(e.marker);
     const s = statusOf(m, e.value);
-    const unit = e.unit || (m ? m.unit : '');
-    return `<div class="result-child-row">
+    const unit = m ? m.unit : '';
+    return `<div class="result-row">
       <div><div class="result-marker">${e.marker}</div><div class="result-cat">${e.cat}</div></div>
       <div class="result-val">${fmt(e.value)} <span style="font-size:11px;color:var(--text-hint);font-weight:400;">${unit}</span> <span class="status-badge status-${s}">${statusLabel(s)}</span></div>
-      <button class="btn-icon" onclick="deleteEntry(${e.id});rerenderRunOrRemove('${run.id}')" title="Delete">✕</button>
+      <div class="result-date">${formatDate(e.date)}</div>
+      <div></div>
+      <button class="btn-icon" onclick="deleteEntry(${e.id})" title="Delete">✕</button>
     </div>`;
   }).join('');
-
-  return `<div class="run-tile" id="run-${run.id}">
-    <div class="run-tile-header" onclick="toggleRunTile('${run.id}')">
-      <div class="run-tile-left">
-        <div class="run-tile-name">${run.testName}</div>
-        <div class="run-tile-meta">${formatDate(run.date)} · ${runEntries.length} marker${runEntries.length !== 1 ? 's' : ''}</div>
-      </div>
-      <div class="run-tile-right">
-        <button class="btn-icon run-tile-delete" onclick="event.stopPropagation();deleteRun('${run.id}')" title="Delete test">✕</button>
-        <span class="run-tile-chevron" id="chevron-${run.id}">›</span>
-      </div>
-    </div>
-    <div class="run-tile-body" id="run-body-${run.id}">
-      <div class="run-tile-children">${childRows}</div>
-    </div>
-  </div>`;
-}
-
-function toggleRunTile(id) {
-  const body = document.getElementById(`run-body-${id}`);
-  const chevron = document.getElementById(`chevron-${id}`);
-  const isOpen = body.classList.contains('open');
-  body.classList.toggle('open', !isOpen);
-  chevron.classList.toggle('open', !isOpen);
-}
-
-function deleteRun(runId) {
-  if (!confirm('Delete this entire test and all its markers?')) return;
-  const run = testRuns.find(r => r.id === runId);
-  if (run) entries = entries.filter(e => !run.markerIds.includes(e.id));
-  testRuns = testRuns.filter(r => r.id !== runId);
-  save();
-  saveTestRuns();
-  renderHistory();
-  renderChipMarkers();
-}
-
-function rerenderRunOrRemove(runId) {
-  const run = testRuns.find(r => r.id === runId);
-  const remaining = run ? entries.filter(e => run.markerIds.includes(e.id)) : [];
-  if (!remaining.length) {
-    testRuns = testRuns.filter(r => r.id !== runId);
-    saveTestRuns();
-    document.getElementById(`run-${runId}`)?.remove();
-  } else {
-    const tile = document.getElementById(`run-${runId}`);
-    if (tile) tile.outerHTML = renderRunTile(run, remaining);
-  }
-  renderChipMarkers();
 }
 
 function buildCatFilter() {
@@ -854,172 +567,3 @@ function setView(v) {
   snapToView(0, false);
   document.querySelectorAll('.nav-tab')[0].classList.add('active');
 })();
-// ── Custom Template Modal ────────────────────────────────────────────────────
-
-let editingTemplateId = null;
-let draftMarkers = [];
-
-function populateTmplMarkerDropdown() {
-  const sel = document.getElementById('tmpl-mk-name');
-  const currentVal = sel.value;
-  sel.innerHTML = '<option value="">— Select a marker —</option>' +
-    MARKERS.map(m => `<option value="${m.name}"${m.name === currentVal ? ' selected' : ''}>${m.name} (${m.cat})</option>`).join('');
-  onTmplMarkerPickChange();
-}
-
-function onTmplMarkerPickChange() {
-  const name = document.getElementById('tmpl-mk-name').value;
-  const unitSel = document.getElementById('tmpl-mk-unit');
-  const m = MARKERS.find(mk => mk.name === name);
-  if (m) {
-    unitSel.innerHTML = `<option value="${m.unit}">${m.unit}</option>`;
-    unitSel.value = m.unit;
-  } else {
-    unitSel.innerHTML = '<option value="">— Unit —</option>';
-  }
-}
-
-function openTemplateModal(id) {
-  editingTemplateId = id || null;
-  populateTmplMarkerDropdown();
-  if (id) {
-    const tmpl = customTemplates.find(t => t.id === id);
-    if (!tmpl) return;
-    draftMarkers = tmpl.markers.map(m => ({ ...m }));
-    document.getElementById('tmpl-name').value = tmpl.name;
-    document.getElementById('tmpl-delete-wrap').style.display = 'block';
-    document.querySelector('.template-modal-title').textContent = 'Edit Template';
-  } else {
-    draftMarkers = [];
-    document.getElementById('tmpl-name').value = '';
-    document.getElementById('tmpl-delete-wrap').style.display = 'none';
-    document.querySelector('.template-modal-title').textContent = 'New Test Template';
-  }
-  renderDraftMarkers();
-  document.getElementById('template-modal').classList.add('open');
-}
-
-function closeTemplateModal() {
-  document.getElementById('template-modal').classList.remove('open');
-  editingTemplateId = null;
-  draftMarkers = [];
-}
-
-function renderDraftMarkers() {
-  const el = document.getElementById('tmpl-marker-list');
-  if (!draftMarkers.length) {
-    el.innerHTML = `<div class="tmpl-empty">No markers yet. Add one below.</div>`;
-    return;
-  }
-  el.innerHTML = draftMarkers.map((m, i) => `
-    <div class="tmpl-marker-row">
-      <div class="tmpl-marker-info">
-        <span class="tmpl-marker-name">${m.name}</span>
-        <span class="tmpl-marker-unit">${m.unit || ''}</span>
-      </div>
-      <div class="tmpl-marker-actions">
-        <button class="btn-icon tmpl-edit-btn" onclick="editDraftMarker(${i})" title="Edit">✎</button>
-        <button class="btn-icon tmpl-delete-btn" onclick="removeDraftMarker(${i})" title="Remove">✕</button>
-      </div>
-    </div>
-  `).join('');
-}
-
-function addDraftMarker() {
-  const nameEl = document.getElementById('tmpl-mk-name');
-  const unitEl = document.getElementById('tmpl-mk-unit');
-  const name = nameEl.value.trim();
-  const unit = unitEl.value.trim();
-  if (!name) { showToast('Enter a marker name.'); return; }
-  if (draftMarkers.find(m => m.name.toLowerCase() === name.toLowerCase())) {
-    showToast('Marker already added.'); return;
-  }
-  draftMarkers.push({ name, unit, cat: 'Custom', low: null, high: null });
-  nameEl.value = '';
-  unitEl.value = '';
-  renderDraftMarkers();
-}
-
-function removeDraftMarker(i) {
-  draftMarkers.splice(i, 1);
-  renderDraftMarkers();
-}
-
-function editDraftMarker(i) {
-  const m = draftMarkers[i];
-  // Swap the row into an inline edit form
-  const el = document.getElementById('tmpl-marker-list');
-  const rows = el.querySelectorAll('.tmpl-marker-row');
-  if (!rows[i]) return;
-
-  const markerOptions = MARKERS.map(mk =>
-    `<option value="${mk.name}"${mk.name === m.name ? ' selected' : ''}>${mk.name} (${mk.cat})</option>`
-  ).join('');
-
-  const unitVal = m.unit || '';
-
-  rows[i].innerHTML = `
-    <div class="tmpl-inline-edit">
-      <select id="tmpl-edit-name-${i}" onchange="onTmplEditNameChange(${i})" class="tmpl-inline-select">
-        <option value="">— Select —</option>
-        ${markerOptions}
-      </select>
-      <select id="tmpl-edit-unit-${i}" class="tmpl-inline-select" style="max-width:110px;">
-        <option value="${unitVal}">${unitVal || '—'}</option>
-      </select>
-      <div style="display:flex;gap:6px;flex-shrink:0;">
-        <button class="btn-icon tmpl-edit-btn" onclick="confirmEditDraftMarker(${i})" title="Save">✓</button>
-        <button class="btn-icon tmpl-delete-btn" onclick="renderDraftMarkers()" title="Cancel">✕</button>
-      </div>
-    </div>
-  `;
-}
-
-function onTmplEditNameChange(i) {
-  const name = document.getElementById(`tmpl-edit-name-${i}`).value;
-  const unitSel = document.getElementById(`tmpl-edit-unit-${i}`);
-  const m = MARKERS.find(mk => mk.name === name);
-  if (m) {
-    unitSel.innerHTML = `<option value="${m.unit}">${m.unit}</option>`;
-  } else {
-    unitSel.innerHTML = '<option value="">—</option>';
-  }
-}
-
-function confirmEditDraftMarker(i) {
-  const name = document.getElementById(`tmpl-edit-name-${i}`).value;
-  const unit = document.getElementById(`tmpl-edit-unit-${i}`).value;
-  if (!name) { showToast('Select a marker.'); return; }
-  const mk = MARKERS.find(m => m.name === name);
-  draftMarkers[i] = { name, unit, cat: mk ? mk.cat : 'Custom', low: mk ? mk.low : null, high: mk ? mk.high : null };
-  renderDraftMarkers();
-}
-
-function saveTemplate() {
-  const name = document.getElementById('tmpl-name').value.trim();
-  if (!name) { showToast('Give your test a name.'); return; }
-  if (!draftMarkers.length) { showToast('Add at least one marker.'); return; }
-  if (editingTemplateId) {
-    const idx = customTemplates.findIndex(t => t.id === editingTemplateId);
-    if (idx > -1) customTemplates[idx] = { id: editingTemplateId, name, markers: draftMarkers };
-  } else {
-    customTemplates.push({ id: 'tmpl_' + Date.now(), name, markers: draftMarkers });
-  }
-  saveTemplates();
-  buildCatPills();
-  closeTemplateModal();
-  showToast('Template saved!');
-}
-
-function deleteTemplate(id) {
-  if (!confirm('Delete this template?')) return;
-  customTemplates = customTemplates.filter(t => t.id !== id);
-  saveTemplates();
-  if (selectedCat === '__tmpl__' + id) {
-    selectedCat = CATS[0];
-    buildMarkerSelect();
-  }
-  buildCatPills();
-  closeTemplateModal();
-  showToast('Template deleted.');
-}
